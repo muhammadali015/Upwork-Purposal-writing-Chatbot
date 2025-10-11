@@ -384,8 +384,14 @@ app.get('*', (req, res) => {
   res.sendFile('client/build/index.html', { root: '.' });
 });
 
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`Server running on http://127.0.0.1:${PORT}`);
-  console.log(`OpenRouter API configured: ${apiKey ? 'Yes' : 'No'}`);
-  console.log(`Using model: ${MODEL}`);
-});
+// For Vercel deployment
+module.exports = app;
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, '127.0.0.1', () => {
+    console.log(`Server running on http://127.0.0.1:${PORT}`);
+    console.log(`OpenRouter API configured: ${apiKey ? 'Yes' : 'No'}`);
+    console.log(`Using model: ${MODEL}`);
+  });
+}
