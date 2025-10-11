@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Send, Copy, CheckCircle, AlertCircle, Loader, Bot, User, Sparkles, MessageSquare } from 'lucide-react';
+import { Copy, CheckCircle, AlertCircle, Loader, Bot, User, Sparkles, MessageSquare } from 'lucide-react';
 import './App.css';
 
 function App() {
   const [projectDescription, setProjectDescription] = useState('');
-  const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copiedIndex, setCopiedIndex] = useState(null);
@@ -54,7 +53,6 @@ function App() {
 
     setLoading(true);
     setError('');
-    setProposals([]);
 
     try {
       const response = await axios.post('/api/generate-proposals', {
