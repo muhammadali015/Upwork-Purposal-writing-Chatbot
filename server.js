@@ -8,10 +8,16 @@ const PORT = process.env.PORT || 5000;
 
 // Initialize OpenRouter API
 const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+console.log('API Key Status:', apiKey ? 'Found' : 'Missing');
+console.log('Environment:', process.env.NODE_ENV || 'development');
+
 if (!apiKey) {
   console.error('ERROR: OPENROUTER_API_KEY environment variable is missing or empty');
-  console.error('Please create a .env file with: OPENROUTER_API_KEY=your_api_key_here');
-  process.exit(1);
+  console.error('Available environment variables:', Object.keys(process.env).filter(key => key.includes('API')));
+  // Don't exit in production, let the API endpoint handle the error
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
 }
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -34,7 +40,9 @@ app.post('/api/generate-proposals', async (req, res) => {
     }
 
     if (!apiKey) {
-      return res.status(500).json({ error: 'OpenRouter API key not configured. Please check your .env file.' });
+      console.error('API Key missing in request handler');
+      console.error('Environment variables available:', Object.keys(process.env).filter(key => key.includes('API')));
+      return res.status(500).json({ error: 'OpenRouter API key not configured. Please check your environment variables.' });
     }
 
     // Use the specific templates provided
