@@ -30,6 +30,16 @@ app.use(express.json());
 // Serve static files from React build
 app.use(express.static('client/build'));
 
+// Test endpoint to check environment variables
+app.get('/api/test-env', (req, res) => {
+  res.json({
+    hasApiKey: !!apiKey,
+    environment: process.env.NODE_ENV || 'development',
+    apiKeyLength: apiKey ? apiKey.length : 0,
+    allEnvVars: Object.keys(process.env).filter(key => key.includes('API'))
+  });
+});
+
 // API endpoint to generate proposals
 app.post('/api/generate-proposals', async (req, res) => {
   try {
