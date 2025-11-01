@@ -23,5 +23,7 @@
       "dest": "/client/build/$1"
     }
   ],
-  "buildCommand": "npm run build"
+  "env": {
+    "NODE_ENV": "production"
+  }
 }

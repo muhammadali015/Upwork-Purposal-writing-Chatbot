@@ -1,30 +1,39 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
-require('dotenv').config();
+// Only load dotenv in development - Vercel provides env vars automatically
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Initialize OpenRouter API
-const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-console.log('API Key Status:', apiKey ? 'Found' : 'Missing');
-console.log('Environment:', process.env.NODE_ENV || 'development');
-
-if (!apiKey) {
-  console.error('ERROR: OPENROUTER_API_KEY environment variable is missing or empty');
-  console.error('Available environment variables:', Object.keys(process.env).filter(key => key.includes('API')));
-  // Don't exit in production, let the API endpoint handle the error
-  if (process.env.NODE_ENV !== 'production') {
-    process.exit(1);
+// Function to get API key (check dynamically for Vercel compatibility)
+function getApiKey() {
+  const key = process.env.OPENROUTER_API_KEY?.trim();
+  if (!key) {
+    console.error('ERROR: OPENROUTER_API_KEY environment variable is missing or empty');
+    console.error('Available environment variables:', Object.keys(process.env).filter(key => key.includes('API') || key.includes('KEY')));
   }
+  return key;
 }
+
+// Initialize OpenRouter API - check at startup for logging
+const apiKey = getApiKey();
+console.log('API Key Status:', apiKey ? `Found (${apiKey.length} chars)` : 'Missing');
+console.log('Environment:', process.env.NODE_ENV || 'development');
+console.log('VERCEL:', process.env.VERCEL ? 'Yes' : 'No');
+console.log('VERCEL_URL:', process.env.VERCEL_URL || 'Not set');
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'mistralai/mistral-7b-instruct:free';
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '*',
+  credentials: true
+}));
 app.use(express.json());
 
 // Serve static files from React build
@@ -32,11 +41,15 @@ app.use(express.static('client/build'));
 
 // Test endpoint to check environment variables
 app.get('/api/test-env', (req, res) => {
+  const currentApiKey = getApiKey();
   res.json({
-    hasApiKey: !!apiKey,
+    hasApiKey: !!currentApiKey,
     environment: process.env.NODE_ENV || 'development',
-    apiKeyLength: apiKey ? apiKey.length : 0,
-    allEnvVars: Object.keys(process.env).filter(key => key.includes('API'))
+    apiKeyLength: currentApiKey ? currentApiKey.length : 0,
+    vercel: !!process.env.VERCEL,
+    vercelUrl: process.env.VERCEL_URL || 'Not set',
+    allApiEnvVars: Object.keys(process.env).filter(key => key.includes('API') || key.includes('KEY')),
+    openrouterKeyFound: !!process.env.OPENROUTER_API_KEY
   });
 });
 
@@ -49,10 +62,15 @@ app.post('/api/generate-proposals', async (req, res) => {
       return res.status(400).json({ error: 'Project description is required' });
     }
 
-    if (!apiKey) {
+    // Check API key dynamically at request time
+    const requestApiKey = getApiKey();
+    if (!requestApiKey) {
       console.error('API Key missing in request handler');
-      console.error('Environment variables available:', Object.keys(process.env).filter(key => key.includes('API')));
-      return res.status(500).json({ error: 'OpenRouter API key not configured. Please check your environment variables.' });
+      console.error('All environment variables:', Object.keys(process.env).sort());
+      return res.status(500).json({ 
+        error: 'OpenRouter API key not configured. Please set OPENROUTER_API_KEY in Vercel environment variables.',
+        hint: 'Go to Vercel Dashboard > Settings > Environment Variables and add OPENROUTER_API_KEY'
+      });
     }
 
     // Use the specific templates provided
@@ -189,9 +207,9 @@ CUSTOMIZED TEMPLATE 3:
                temperature: 0.7,
              }, {
                headers: {
-                 'Authorization': `Bearer ${apiKey}`,
+                 'Authorization': `Bearer ${requestApiKey}`,
                  'Content-Type': 'application/json',
-                 'HTTP-Referer': 'http://localhost:3000',
+                 'HTTP-Referer': process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.FRONTEND_URL || 'http://localhost:3000'),
                  'X-Title': 'Upwork Proposal Generator'
                }
              });
@@ -256,9 +274,9 @@ PROPOSAL 3:
         temperature: 0.8,
       }, {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${requestApiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'http://localhost:3000',
+          'HTTP-Referer': process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.FRONTEND_URL || 'http://localhost:3000'),
           'X-Title': 'Upwork Proposal Generator'
         }
       });
@@ -411,5 +429,8 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`Server running on http://127.0.0.1:${PORT}`);
     console.log(`OpenRouter API configured: ${apiKey ? 'Yes' : 'No'}`);
     console.log(`Using model: ${MODEL}`);
+    if (!apiKey) {
+      console.warn('⚠️  WARNING: OPENROUTER_API_KEY not found. Create a .env file with your API key for local development.');
+    }
   });
 }
