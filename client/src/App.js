@@ -81,7 +81,20 @@ function App() {
       }
     } catch (err) {
       console.error('Error:', err);
-      setError(err.response?.data?.error || 'Failed to generate proposals. Please check your API key.');
+      console.error('Error response:', err.response?.data);
+      
+      let errorMsg = err.response?.data?.error || err.response?.data?.details || 'Failed to generate proposals. Please check your API key.';
+      
+      // Add more specific error messages
+      if (err.response?.status === 500 && err.response?.data?.details) {
+        errorMsg = err.response.data.details;
+      } else if (err.response?.status === 401 || err.response?.status === 403) {
+        errorMsg = 'API key is invalid or expired. Please check your Vercel environment variables.';
+      } else if (!err.response) {
+        errorMsg = 'Network error: Could not connect to the server. Please check your internet connection.';
+      }
+      
+      setError(errorMsg);
 
       // Remove loading message and add error message
       setMessages(prev => {
@@ -89,7 +102,7 @@ function App() {
         const errorMessage = {
           id: Date.now() + 2,
           type: 'bot',
-          content: '❌ Sorry, I encountered an error while generating proposals. Please try again.',
+          content: `❌ ${errorMsg}`,
           timestamp: new Date()
         };
         return [...filtered, errorMessage];

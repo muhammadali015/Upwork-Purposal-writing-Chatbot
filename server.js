@@ -191,6 +191,10 @@ CUSTOMIZED TEMPLATE 3:
 [content]
 `;
 
+             console.log('Making API request to OpenRouter...');
+             const refererUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.FRONTEND_URL || 'http://localhost:3000');
+             console.log('Using referer:', refererUrl);
+             
              const customizationResponse = await axios.post(OPENROUTER_API_URL, {
                model: MODEL,
                messages: [
@@ -209,10 +213,13 @@ CUSTOMIZED TEMPLATE 3:
                headers: {
                  'Authorization': `Bearer ${requestApiKey}`,
                  'Content-Type': 'application/json',
-                 'HTTP-Referer': process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.FRONTEND_URL || 'http://localhost:3000'),
+                 'HTTP-Referer': refererUrl,
                  'X-Title': 'Upwork Proposal Generator'
-               }
+               },
+               timeout: 60000 // 60 second timeout
              });
+             
+             console.log('API response received, status:', customizationResponse.status);
 
              const customizedContent = customizationResponse.data.choices[0].message.content;
              const customizedTemplates = parseCustomizedTemplates(customizedContent);
@@ -258,6 +265,10 @@ PROPOSAL 3:
 [content]
 `;
 
+      console.log('Making API request to OpenRouter (custom mode)...');
+      const refererUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.FRONTEND_URL || 'http://localhost:3000');
+      console.log('Using referer:', refererUrl);
+      
       const response = await axios.post(OPENROUTER_API_URL, {
         model: MODEL,
         messages: [
@@ -276,10 +287,13 @@ PROPOSAL 3:
         headers: {
           'Authorization': `Bearer ${requestApiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.FRONTEND_URL || 'http://localhost:3000'),
+          'HTTP-Referer': refererUrl,
           'X-Title': 'Upwork Proposal Generator'
-        }
+        },
+        timeout: 60000 // 60 second timeout
       });
+      
+      console.log('API response received, status:', response.status);
 
       const aiResponse = response.data.choices[0].message.content;
       processedTemplates = parseProposals(aiResponse);
@@ -293,9 +307,29 @@ PROPOSAL 3:
 
   } catch (error) {
     console.error('Error generating proposals:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
+    
+    let errorMessage = 'Failed to generate proposals';
+    let errorDetails = error.message;
+    
+    if (error.response) {
+      // API responded with error
+      errorDetails = `API Error (${error.response.status}): ${error.response.data?.error?.message || error.response.statusText || error.message}`;
+      console.error('API Error Response:', error.response.data);
+    } else if (error.request) {
+      // Request made but no response
+      errorDetails = 'No response from API. Please check your API key and network connection.';
+    } else {
+      // Error setting up request
+      errorDetails = error.message;
+    }
+    
     res.status(500).json({ 
-      error: 'Failed to generate proposals',
-      details: error.message 
+      error: errorMessage,
+      details: errorDetails,
+      type: error.response ? 'api_error' : error.request ? 'network_error' : 'request_error'
     });
   }
 });
