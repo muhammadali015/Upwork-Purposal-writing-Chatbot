@@ -57,6 +57,12 @@ app.get('/api/test-env', (req, res) => {
 
 // API endpoint to generate proposals
 app.post('/api/generate-proposals', async (req, res) => {
+  console.log('POST /api/generate-proposals - Request received');
+  console.log('Request method:', req.method);
+  console.log('Request path:', req.path);
+  console.log('Request url:', req.url);
+  console.log('Request body:', req.body);
+  
   try {
     const { projectDescription, templateType = 'default' } = req.body;
 
@@ -457,6 +463,7 @@ app.get('*', (req, res) => {
 });
 
 // For Vercel deployment
+// Export the Express app - Vercel will route /api/* requests here
 module.exports = app;
 
 // For local development
