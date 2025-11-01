@@ -29,10 +29,12 @@ console.log('VERCEL_URL:', process.env.VERCEL_URL || 'Not set');
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'mistralai/mistral-7b-instruct:free';
 
-// Middleware
+// Middleware - CORS for all origins in production
 app.use(cors({
-  origin: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '*',
-  credentials: true
+  origin: '*', // Allow all origins for Vercel deployment
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
